@@ -1,0 +1,43 @@
+import pandas as pd
+from collections import defaultdict
+def bayesian_classifier_verbose(data, X_test, laplace=False, k=2):
+    class_data = defaultdict(list)
+    for row in data:
+        features = row[:-1]
+        label = row[-1]
+        class_data[label].append(features)
+    total_samples = len(data)
+    posteriors = {}
+    print(f"\nTest Sample: {X_test}\n")
+    for label, rows in class_data.items():
+        print(f"Class = {label}")
+        prior = len(rows) / total_samples
+        print(f"Prior P({label}) = {prior}")
+        likelihood = 1.0
+        rows_subset = rows.copy()
+        for i, x_val in enumerate(X_test):
+            if i > 0:
+                rows_subset = [r for r in rows_subset if r[i-1] == X_test[i-1]]
+            count = sum(1 for r in rows_subset if r[i] == x_val)
+            n_rows = len(rows_subset)
+            if laplace:
+                prob = (count + 1) / (n_rows + k) if n_rows > 0 else 1/k
+            else:
+                prob = count / n_rows if n_rows > 0 else 0
+            likelihood *= prob
+            print(f"P(F{i+1}={x_val} | previous features, {label}) = {prob} "
+                  f"(count={count}, total_rows={n_rows})")
+        posterior = prior * likelihood
+        posteriors[label] = posterior
+        print(f"Likelihood = {likelihood}")
+        print(f"Posterior (unnormalized) = {posterior}\n")
+    prediction = max(posteriors, key=posteriors.get)
+    print(f"Final Prediction = {prediction}")
+    return posteriors, prediction
+df = pd.read_csv("exp5dataset.csv")
+data = df.values.tolist()
+X_test = list(map(int, input("Enter test sample values separated by space: ").split()))
+print("\n=== FULL BAYESIAN (MLE) ===\n")
+posteriors_mle, pred_mle = bayesian_classifier_verbose(data, X_test, laplace=False)
+print("\n=== BAYESIAN ESTIMATION (LAPLACE) ===\n")
+posteriors_bayes, pred_bayes = bayesian_classifier_verbose(data, X_test, laplace=True, k=2)
